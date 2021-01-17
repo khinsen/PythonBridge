@@ -97,6 +97,7 @@ PBPharoPlatform >> folderForApplication: application [
 PBPharoPlatform >> forceInstallEnvironmentForApp: application [
 	| proc |
 	self assert: PBPharoPipenvProcess pipenvPath isEmptyOrNil not description: 'pipenv is apparently not accessible at a standard location. Please, have a look at the Troubleshooting section of https://objectprofile.github.io/PythonBridge/pages/pharo-installation'.
+	self patchInstallScript: (self runtimeFolderForApplication: application) / 'install_env.sh'.
 	proc := OSSUnixSubprocess new
 				command: '/bin/bash';
 				addAllEnvVariablesFromParentWithoutOverride;
@@ -118,6 +119,16 @@ PBPharoPlatform >> installEnvironmentForApp: application [
 { #category : #hooks }
 PBPharoPlatform >> newRandomName [
 	^ 'pb' , UUID new asString36
+]
+
+{ #category : #utils }
+PBPharoPlatform >> patchInstallScript: aFileReference [
+	| lines |
+	lines := Character lf split: (aFileReference readStreamDo: #contents).
+	lines last = 'pipenv install' ifFalse: [ ^ self ].
+	lines at: lines size put: PBPharoPipenvProcess pipenvPath, ' install'.
+	aFileReference writeStreamDo: [ :s |
+		s nextPutAll: ((Character lf join:  lines ))]
 ]
 
 { #category : #accessing }
